@@ -1,53 +1,53 @@
-name: CI/CD Pipeline for React App
+# name: CI/CD Pipeline for React App
 
-on:
-  push:
-    branches:
-      - main
+# on:
+#   push:
+#     branches:
+#       - main
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+# jobs:
+#   build-and-deploy:
+#     runs-on: ubuntu-latest
 
-    steps:
-      # Checkout the repository code
-      - name: Checkout code
-        uses: actions/checkout@v4
+#     steps:
+#       # Checkout the repository code
+#       - name: Checkout code
+#         uses: actions/checkout@v4
 
-      # Set up Node.js
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
+#       # Set up Node.js
+#       - name: Set up Node.js
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: '18'
 
-      # Install dependencies and build React app
-      - name: Build React app
-        run: |
-          npm install
-          npm run build
+#       # Install dependencies and build React app
+#       - name: Build React app
+#         run: |
+#           npm install
+#           npm run build
 
-      # Copy build files to server via SCP
-      - name: Deploy to server
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SERVER_IP: ${{ secrets.SERVER_IP }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-        run: |
-          echo "$SSH_PRIVATE_KEY" > private_key
-          chmod 600 private_key
-          scp -o StrictHostKeyChecking=no -i private_key -r build/* $SERVER_USER@$SERVER_IP:/var/www/react-app/build/
-          rm private_key
+#       # Copy build files to server via SCP
+#       - name: Deploy to server
+#         env:
+#           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+#           SERVER_IP: ${{ secrets.SERVER_IP }}
+#           SERVER_USER: ${{ secrets.SERVER_USER }}
+#         run: |
+#           echo "$SSH_PRIVATE_KEY" > private_key
+#           chmod 600 private_key
+#           scp -o StrictHostKeyChecking=no -i private_key -r build/* $SERVER_USER@$SERVER_IP:/var/www/react-app/build/
+#           rm private_key
 
-      # Restart Nginx on the server
-      - name: Restart Nginx
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SERVER_IP: ${{ secrets.SERVER_IP }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-        run: |
-          echo "$SSH_PRIVATE_KEY" > private_key
-          chmod 600 private_key
-          ssh -o StrictHostKeyChecking=no -i private_key $SERVER_USER@$SERVER_IP << 'EOF'
-            sudo systemctl restart nginx
-          EOF
-          rm private_key
+#       # Restart Nginx on the server
+#       - name: Restart Nginx
+#         env:
+#           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+#           SERVER_IP: ${{ secrets.SERVER_IP }}
+#           SERVER_USER: ${{ secrets.SERVER_USER }}
+#         run: |
+#           echo "$SSH_PRIVATE_KEY" > private_key
+#           chmod 600 private_key
+#           ssh -o StrictHostKeyChecking=no -i private_key $SERVER_USER@$SERVER_IP << 'EOF'
+#             sudo systemctl restart nginx
+#           EOF
+#           rm private_key
