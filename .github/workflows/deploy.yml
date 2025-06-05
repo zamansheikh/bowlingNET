@@ -1,9 +1,9 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline for React App
 
 on:
   push:
     branches:
-      - main  # Trigger pipeline on push to main branch
+      - main
 
 jobs:
   build-and-deploy:
@@ -14,51 +14,40 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Set up Docker Buildx (if using Docker)
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
 
-      # Build Docker image
-      - name: Build Docker image
+      # Install dependencies and build React app
+      - name: Build React app
         run: |
-          docker build -t my-app:latest .
+          npm install
+          npm run build
 
-      # Save Docker image as tar file
-      - name: Save Docker image
-        run: |
-          docker save my-app:latest > my-app.tar
-
-      # Copy Docker image to server via SCP
-      - name: Copy Docker image to server
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SERVER_IP: ${{ secrets.SERVER_IP }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-        run: |
-          echo "$SSH_PRIVATE_KEY" > private_key
-          chmod 600 private_key
-          scp -o StrictHostKeyChecking=no -i private_key my-app.tar $SERVER_USER@$SERVER_IP:/home/$SERVER_USER/my-app.tar
-          rm private_key
-
-      # Deploy to Ubuntu server via SSH
+      # Copy build files to server via SCP
       - name: Deploy to server
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SERVER_IP: ${{ secrets.SERVER_IP }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
-          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+        run: |
+          echo "$SSH_PRIVATE_KEY" > private_key
+          chmod 600 private_key
+          scp -o StrictHostKeyChecking=no -i private_key -r build/* $SERVER_USER@$SERVER_IP:/var/www/react-app/build/
+          rm private_key
+
+      # Restart Nginx on the server
+      - name: Restart Nginx
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
           echo "$SSH_PRIVATE_KEY" > private_key
           chmod 600 private_key
           ssh -o StrictHostKeyChecking=no -i private_key $SERVER_USER@$SERVER_IP << 'EOF'
-            # Load Docker image
-            docker load < /home/$SERVER_USER/my-app.tar
-            # Stop and remove existing container (if any)
-            docker stop my-app-container || true
-            docker rm my-app-container || true
-            # Run new container
-            docker run -d --name my-app-container -p $SERVER_PORT:8080 my-app:latest
-            # Clean up
-            rm /home/$SERVER_USER/my-app.tar
+            sudo systemctl restart nginx
           EOF
           rm private_key
